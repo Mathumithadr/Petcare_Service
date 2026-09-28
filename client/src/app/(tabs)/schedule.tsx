@@ -3,7 +3,7 @@ import { View, Text } from "react-native";
 export default function ScheduleScreen() {
   return (
     <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-xl font-bold text-orange-500">Schedule</Text>
+      <Text className="text-xl font-bold text-petora-orange">Schedule</Text>
     </View>
   );
 }

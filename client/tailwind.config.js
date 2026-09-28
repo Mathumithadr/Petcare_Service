@@ -1,9 +1,12 @@
-/** @type {import('tailwindcss').Config} */
+const colors = require("./src/theme/colors");
+
 module.exports = {
-  content: ["./App.{js,jsx,ts,tsx}", "./src/**/*.{js,jsx,ts,tsx}"],
+  content: ["./src/app/**/*.{js,jsx,ts,tsx}", "./src/components/**/*.{js,jsx,ts,tsx}"],
   presets: [require("nativewind/preset")],
   theme: {
-    extend: {},
+    extend: {
+      colors: { petora: colors },
+    },
   },
   plugins: [],
-}
+};

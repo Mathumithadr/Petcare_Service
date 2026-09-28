@@ -2,8 +2,8 @@ import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View, TouchableOpacity } from "react-native";
 
-const ORANGE = "#F97316";
-const GRAY = "#9CA3AF";
+import colors from "../../theme/colors";
+import HomeHeader from "../../components/HomeHeader";
 
 function AddPetButton({ onPress }: { onPress?: () => void }) {
     return (
@@ -20,7 +20,7 @@ function AddPetButton({ onPress }: { onPress?: () => void }) {
                     width: 60,
                     height: 60,
                     borderRadius: 30,
-                    backgroundColor: ORANGE,
+                    backgroundColor: colors.orange,
                     justifyContent: "center",
                     alignItems: "center",
                     shadowColor: "#000",
@@ -30,7 +30,7 @@ function AddPetButton({ onPress }: { onPress?: () => void }) {
                     elevation: 6,
                 }}
             >
-                <Ionicons name="paw" size={28} color="white" />
+                <Ionicons name="paw" size={28} color={colors.navy} />
             </View>
         </TouchableOpacity>
     );
@@ -40,13 +40,15 @@ export default function TabsLayout() {
     return (
         <Tabs
             screenOptions={{
-                headerShown: false,
-                tabBarActiveTintColor: ORANGE,
-                tabBarInactiveTintColor: GRAY,
+                headerShown: true,
+                header: () => <HomeHeader />,
+                tabBarActiveTintColor: colors.navy,
+                tabBarInactiveTintColor: colors.inkMuted,
                 tabBarStyle: {
                     height: 64,
                     paddingBottom: 8,
                     paddingTop: 8,
+                    backgroundColor: colors.white,
                 },
             }}
         >
