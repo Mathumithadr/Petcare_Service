@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, ScrollView, Modal, TouchableOpacity } from "react-native";
 import ServicesGrid from "../../components/ServicesGrid";
 import SelectPetStep from "../../components/SelectPetStep";
@@ -8,6 +8,8 @@ import ProviderDetailsPopup from "../../components/ProviderDetailsPopup";
 import { mockPets, Pet } from "../../data/mockPets";
 import { mockServices, Service } from "../../data/mockServices";
 import { mockProviders, Provider } from "../../data/mockProviders";
+import { useBookings } from "../../context/BookingsContext";
+import { useLocalSearchParams } from "expo-router";
 
 type Step = "select-service" | "select-pet" | "form";
 
@@ -35,23 +37,26 @@ export default function BookingScreen() {
   const [providerServiceOptions, setProviderServiceOptions] = useState<Service[] | null>(null);
 
   const [popupProvider, setPopupProvider] = useState<Provider | null>(null);
-  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
   const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
 
-  const [confirmedBookings, setConfirmedBookings] = useState
-    <{
-      id: string;
-      service: Service;
-      pet: Pet;
-      provider: Provider | null;
-      date: string;
-      time: string;
-      address: string;
-      notes: string;
-    }[]
-    >([]);
+  const { editBookingId } = useLocalSearchParams<{ editBookingId?: string }>();
+  const { bookings, addBooking, updateBooking, getBooking } = useBookings();
+
+  useEffect(() => {
+    if (editBookingId && editBookingId !== editingBookingId) {
+      const existing = getBooking(editBookingId);
+      if (existing) {
+        setSelectedService(existing.service);
+        setSelectedProvider(existing.provider);
+        setSelectedPetId(existing.pet.id);
+        setEditingBookingId(existing.id);
+        setStep("form");
+      }
+    }
+  }, [editBookingId]);
 
   const selectedPet = mockPets.find((p) => p.id === selectedPetId) ?? null;
+  
 
   const resetFlow = () => {
     setStep("select-service");
@@ -109,48 +114,30 @@ export default function BookingScreen() {
       }
     }
 
-    if (editingBookingId) {
-      setConfirmedBookings((prev) =>
-        prev.map((b) =>
-          b.id === editingBookingId
-            ? { ...b, date: details.date, time: details.time, address: details.address, notes: details.notes, provider: finalProvider ?? b.provider }
-            : b
-        )
-      );
-    } else {
-      setConfirmedBookings((prev) => [
-        ...prev,
-        {
-          id: String(Date.now()),
-          service: selectedService,
-          pet: selectedPet,
-          provider: finalProvider,
-          date: details.date,
-          time: details.time,
-          address: details.address,
-          notes: details.notes,
-        },
-      ]);
-    }
+   if (editingBookingId) {
+  updateBooking(editingBookingId, {
+    date: details.date,
+    time: details.time,
+    address: details.address,
+    notes: details.notes,
+    provider: finalProvider ?? undefined,
+  });
+} else {
+  addBooking({
+    service: selectedService,
+    pet: selectedPet,
+    provider: finalProvider,
+    date: details.date,
+    time: details.time,
+    address: details.address,
+    notes: details.notes,
+  });
+}
 
     resetFlow();
   };
 
-  const handleCancelBooking = (id: string) => {
-    setConfirmedBookings((prev) => prev.filter((b) => b.id !== id));
-    setCancelConfirmId(null);
-  };
-
-  const handleRescheduleBooking = (id: string) => {
-    const booking = confirmedBookings.find((b) => b.id === id);
-    if (!booking) return;
-    setSelectedService(booking.service);
-    setSelectedProvider(booking.provider);
-    setSelectedPetId(booking.pet.id);
-    setEditingBookingId(id);
-    setStep("form");
-
-  };
+  
 
   // Pets eligible for the currently selected service (and provider, if set)
   const eligiblePets = selectedService
@@ -221,67 +208,13 @@ export default function BookingScreen() {
             provider={selectedProvider}
             initialValues={
               editingBookingId
-                ? confirmedBookings.find((b) => b.id === editingBookingId)
+                ? bookings.find((b) => b.id === editingBookingId)
                 : undefined
             }
             onConfirm={handleConfirmBooking}
             onBack={() => setStep("select-pet")}
           />
         )}
-
-        {/* My Bookings — unchanged from before */}
-        <View className="mt-6 px-4 pb-8">
-          <Text className="text-lg font-bold text-petora-navy mb-3">My Bookings</Text>
-          {confirmedBookings.length === 0 ? (
-            <Text className="text-petora-inkMuted text-sm">No bookings yet.</Text>
-          ) : (
-            confirmedBookings.map((b) => (
-              <View key={b.id} className="bg-white rounded-2xl p-4 mb-2 shadow-sm">
-                <Text className="font-semibold text-petora-navy">
-                  {b.service.name} — {b.pet.name}
-                </Text>
-                <Text className="text-petora-inkMuted text-sm mt-1">
-                  {b.provider?.name ?? "Unassigned"} · {b.date} at {b.time}
-                </Text>
-
-                {cancelConfirmId === b.id ? (
-                  <View className="mt-3">
-                    <Text className="text-red-500 text-sm mb-2">Cancel this booking?</Text>
-                    <View className="flex-row gap-2">
-                      <TouchableOpacity
-                        onPress={() => handleCancelBooking(b.id)}
-                        className="bg-red-400 rounded-full px-4 py-1.5"
-                      >
-                        <Text className="text-petora-onPrimary text-sm font-medium">Yes, Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => setCancelConfirmId(null)}
-                        className="border border-petora-line rounded-full px-4 py-1.5"
-                      >
-                        <Text className="text-petora-navy text-sm font-medium">Keep It</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ) : (
-                  <View className="flex-row mt-3 gap-2">
-                    <TouchableOpacity
-                      onPress={() => handleRescheduleBooking(b.id)}
-                      className="border border-petora-orange rounded-full px-4 py-1.5"
-                    >
-                      <Text className="text-petora-orange text-sm font-medium">Reschedule</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setCancelConfirmId(b.id)}
-                      className="border border-red-400 rounded-full px-4 py-1.5"
-                    >
-                      <Text className="text-red-400 text-sm font-medium">Cancel</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            ))
-          )}
-        </View>
       </View>
 
       <Modal visible={!!popupProvider} animationType="slide" transparent onRequestClose={() => setPopupProvider(null)}>

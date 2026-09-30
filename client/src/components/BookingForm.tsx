@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Modal } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { Pet } from "../data/mockPets";
 import { Service } from "../data/mockServices";
 import { Provider } from "../data/mockProviders";
@@ -43,6 +44,21 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+const toIsoDate = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+const parseInitialDate = (value?: string) => {
+  if (!value) return new Date();
+  const parsed = new Date(value);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+};
+
+const parseInitialTime = (value?: string) => {
+  if (!value) return new Date();
+  const parsed = new Date(`2000-01-01 ${value}`);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+};
+
 export default function BookingForm({
   service,
   pet,
@@ -51,8 +67,11 @@ export default function BookingForm({
   onConfirm,
   onBack,
 }: BookingFormProps) {
-  const [date, setDate] = useState(initialValues?.date ?? "");
-  const [time, setTime] = useState(initialValues?.time ?? "");
+  const [dateObj, setDateObj] = useState(() => parseInitialDate(initialValues?.date));
+  const [timeObj, setTimeObj] = useState(() => parseInitialTime(initialValues?.time));
+  const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
+  const [draftValue, setDraftValue] = useState(new Date());
+
   const [address, setAddress] = useState(initialValues?.address ?? "");
   const [notes, setNotes] = useState(initialValues?.notes ?? "");
   const [preference, setPreference] = useState<MatchPreference | null>(null);
@@ -60,14 +79,31 @@ export default function BookingForm({
   const needsPreference = !provider;
   const isEditing = !!initialValues;
 
-  const canConfirm =
-    date.trim() && time.trim() && address.trim() && (!needsPreference || preference || isEditing);
+  const canConfirm = address.trim() && (!needsPreference || preference || isEditing);
+
+  const formattedDate = dateObj.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const formattedTime = timeObj.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+  const openPicker = (mode: "date" | "time") => {
+    setDraftValue(mode === "date" ? dateObj : timeObj);
+    setPickerMode(mode);
+  };
+
+  const confirmPicker = () => {
+    if (pickerMode === "date") setDateObj(draftValue);
+    if (pickerMode === "time") setTimeObj(draftValue);
+    setPickerMode(null);
+  };
 
   const handleConfirm = () => {
     if (!canConfirm) return;
     onConfirm({
-      date,
-      time,
+      date: toIsoDate(dateObj),
+      time: formattedTime,
       address,
       notes,
       preference: needsPreference && !isEditing ? preference! : undefined,
@@ -82,7 +118,6 @@ export default function BookingForm({
         {isEditing ? "Reschedule Booking" : "Booking Details"}
       </Text>
 
-      {/* Overview / summary */}
       <View className="bg-petora-orangeTint rounded-2xl p-4 mb-4">
         <View className="flex-row items-center mb-1">
           <Ionicons name="paw" size={16} color={colors.orange} />
@@ -104,7 +139,6 @@ export default function BookingForm({
         )}
       </View>
 
-      {/* Pet Details card */}
       {pet && (
         <View className="border border-petora-line rounded-2xl p-4 mb-6">
           <Text className="text-sm font-semibold text-petora-orange mb-2">
@@ -120,22 +154,23 @@ export default function BookingForm({
         </View>
       )}
 
-      {/* Form fields */}
       <Text className="text-sm font-medium text-petora-navy mb-1">Date *</Text>
-      <TextInput
-        value={date}
-        onChangeText={setDate}
-        placeholder="e.g. 20 Aug 2026"
-        className="border border-petora-line rounded-xl px-4 py-3 mb-4 text-petora-navy"
-      />
+      <TouchableOpacity
+        onPress={() => openPicker("date")}
+        className="flex-row items-center justify-between border border-petora-line rounded-xl px-4 py-3 mb-4"
+      >
+        <Text className="text-petora-navy">{formattedDate}</Text>
+        <Ionicons name="calendar" size={18} color={colors.orange} />
+      </TouchableOpacity>
 
       <Text className="text-sm font-medium text-petora-navy mb-1">Time *</Text>
-      <TextInput
-        value={time}
-        onChangeText={setTime}
-        placeholder="e.g. 4:00 PM"
-        className="border border-petora-line rounded-xl px-4 py-3 mb-4 text-petora-navy"
-      />
+      <TouchableOpacity
+        onPress={() => openPicker("time")}
+        className="flex-row items-center justify-between border border-petora-line rounded-xl px-4 py-3 mb-4"
+      >
+        <Text className="text-petora-navy">{formattedTime}</Text>
+        <Ionicons name="time" size={18} color={colors.orange} />
+      </TouchableOpacity>
 
       <Text className="text-sm font-medium text-petora-navy mb-1">Address *</Text>
       <TextInput
@@ -172,8 +207,9 @@ export default function BookingForm({
       <TouchableOpacity
         onPress={handleConfirm}
         disabled={!canConfirm}
-        className={`rounded-full py-4 items-center mb-3 ${canConfirm ? "bg-petora-orange" : "bg-petora-orangeTint"
-          }`}
+        className={`rounded-full py-4 items-center mb-3 ${
+          canConfirm ? "bg-petora-orange" : "bg-petora-orangeTint"
+        }`}
       >
         <Text className="text-petora-onPrimary font-bold text-base">
           {isEditing ? "Save Changes" : "Confirm Booking"}
@@ -183,6 +219,24 @@ export default function BookingForm({
       <TouchableOpacity onPress={onBack} className="rounded-full py-4 items-center border border-petora-orange">
         <Text className="text-petora-orange font-bold text-base">Back</Text>
       </TouchableOpacity>
+
+      <Modal visible={pickerMode !== null} transparent animationType="slide" onRequestClose={() => setPickerMode(null)}>
+        <View className="flex-1 justify-end bg-black/40">
+          <View className="bg-white rounded-t-3xl p-4">
+            <View className="w-10 h-1 bg-petora-orange rounded-full self-center mb-4" />
+            <DateTimePicker
+              value={draftValue}
+              mode={pickerMode ?? "date"}
+              display="spinner"
+              minimumDate={pickerMode === "date" ? new Date() : undefined}
+              onChange={(_, selected) => selected && setDraftValue(selected)}
+            />
+            <TouchableOpacity onPress={confirmPicker} className="bg-petora-orange rounded-full py-3 items-center mt-2">
+              <Text className="text-petora-onPrimary font-bold">Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

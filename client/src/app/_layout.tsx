@@ -3,8 +3,8 @@ import { Stack } from "expo-router";
 import { useFonts, JotiOne_400Regular } from "@expo-google-fonts/joti-one";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { BookingsProvider } from "../context/BookingsContext";
 
-// Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -14,7 +14,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      // Hide the splash screen after the fonts have loaded and not when the fonts are still loading
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
@@ -24,8 +23,10 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-    </Stack>
+    <BookingsProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    </BookingsProvider>
   );
 }
