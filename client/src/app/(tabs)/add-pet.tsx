@@ -4,7 +4,17 @@ import { Ionicons } from "@expo/vector-icons";
 import PillToggle from "../../components/PillToggle";
 import colors from "../../theme/colors";
 import { StatusBar } from "expo-status-bar";
+import { router } from "expo-router";
 
+const formatAge = (months: string) => {
+  const n = Number(months);
+  if (!n) return months;
+  if (n >= 12) {
+    const years = Math.floor(n / 12);
+    return `${years} ${years === 1 ? "Year" : "Years"}`;
+  }
+  return `${n} ${n === 1 ? "Month" : "Months"}`;
+};
 
 const PET_TYPE_OPTIONS = [
   { label: "Dog", value: "Dog" },
@@ -37,12 +47,35 @@ export default function AddPetScreen() {
   const canSubmit =
     name.trim() && petType && gender && breed.trim() && age.trim() && weight.trim() && aggression && vaccinated !== null;
 
-  const handleSubmit = () => {
-    if (!canSubmit) return;
-    const newPet = { name, petType, gender, breed, age, weight, aggression, vaccinated };
-    console.log("New pet:", newPet);
-    // TODO: connect to real pet storage once backend/shared state is set up
-  };
+const resetForm = () => {
+  setName("");
+  setPetType(null);
+  setGender(null);
+  setBreed("");
+  setAge("");
+  setWeight("");
+  setAggression(null);
+  setVaccinated(null);
+};
+
+const handleSubmit = () => {
+  if (!canSubmit) return;
+
+  resetForm();
+
+  router.replace({
+    pathname: "/pet-added",
+    params: {
+      name,
+      species: petType,
+      breed,
+      age: formatAge(age),
+      gender,
+      photoUrl: "",
+    },
+  });
+};
+  
 
   return (
     <>
